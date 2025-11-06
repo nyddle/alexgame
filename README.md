@@ -41,30 +41,62 @@
 
 ## 🚀 Запуск игры
 
-### Вариант 1: Локальный сервер (рекомендуется)
+⚠️ **ВАЖНО**: Игра использует ES6 модули и требует запуска через HTTP-сервер. Прямое открытие `index.html` в браузере **НЕ РАБОТАЕТ** из-за политики CORS!
 
+### 🎯 Быстрый старт
+
+#### На macOS/Linux:
 ```bash
-# Используйте любой простой HTTP-сервер, например:
+./start-server.sh
+```
 
-# Python 3
-python -m http.server 8000
+#### На Windows:
+```bash
+start-server.bat
+```
 
-# Node.js (http-server)
+Затем откройте в браузере: **http://localhost:8000**
+
+### 📋 Ручной запуск сервера
+
+Если скрипты не работают, используйте один из вариантов:
+
+#### Python 3 (рекомендуется):
+```bash
+python3 -m http.server 8000
+```
+
+#### Python 2:
+```bash
+python -m SimpleHTTPServer 8000
+```
+
+#### Node.js:
+```bash
 npx http-server
+```
 
-# PHP
+#### PHP:
+```bash
 php -S localhost:8000
 ```
 
-Затем откройте в браузере: `http://localhost:8000`
+### ⚠️ Решение проблем
 
-### Вариант 2: Открытие файла напрямую
+**Ошибка**: `Access to script from origin 'null' has been blocked by CORS policy`
 
-⚠️ **Важно**: Из-за политики CORS некоторые браузеры могут блокировать загрузку модулей.
+**Решение**: Вы пытаетесь открыть файл напрямую. Обязательно используйте HTTP-сервер (см. выше)!
 
-Для Chrome/Edge запустите с флагом:
+**Альтернатива для Chrome/Edge** (не рекомендуется):
 ```bash
-chrome --allow-file-access-from-files index.html
+# macOS
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --allow-file-access-from-files
+
+# Windows
+chrome.exe --allow-file-access-from-files
+
+# Linux
+google-chrome --allow-file-access-from-files
 ```
 
 ## 🎨 Особенности реализации
@@ -140,15 +172,33 @@ this.stations.push(station);
 
 ```
 alexgame/
-├── index.html      # Основной HTML файл
-├── game.js         # Логика игры на Three.js
-└── README.md       # Документация
+├── index.html          # Основной HTML файл
+├── game.js             # Логика игры на Three.js
+├── README.md           # Документация
+├── start-server.sh     # Скрипт запуска для macOS/Linux
+└── start-server.bat    # Скрипт запуска для Windows
 ```
 
-## 🐛 Известные проблемы
+## 🐛 Решение проблем
 
-- При открытии файла напрямую (без сервера) могут возникнуть CORS ошибки
-- В некоторых браузерах требуется явное разрешение на загрузку модулей
+### CORS ошибка при запуске
+**Проблема**: При открытии `index.html` напрямую появляется ошибка CORS.
+
+**Решение**: Используйте скрипт запуска (`./start-server.sh` или `start-server.bat`) или запустите HTTP-сервер вручную.
+
+### Скрипт не запускается
+**macOS/Linux**: Дайте права на выполнение:
+```bash
+chmod +x start-server.sh
+```
+
+**Windows**: Запустите от имени администратора или используйте PowerShell.
+
+### Python/PHP не найден
+Установите Python 3 или используйте Node.js:
+```bash
+npx http-server
+```
 
 ## 📝 Лицензия
 
