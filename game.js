@@ -337,99 +337,115 @@ class RingsGame {
     }
 
     setupGame() {
-        // Создаем систему колец
+        // Создаем систему колец, которые касаются друг друга
         // Центральное кольцо
         const ring1 = new Ring(this.scene, 3, new THREE.Vector3(0, 0, 0));
         this.rings.push(ring1);
 
-        // Кольца вокруг центрального
-        const ring2 = new Ring(this.scene, 2.5, new THREE.Vector3(5, 0, 0));
+        // Вспомогательная функция: вычисление позиции центра кольца, касающегося другого кольца
+        // angle - угол направления от центра первого кольца (в плоскости XZ)
+        const getTangentRingPosition = (centerRing, newRadius, angle) => {
+            const distance = centerRing.radius + newRadius; // Расстояние между центрами для касания
+            return new THREE.Vector3(
+                centerRing.position.x + Math.cos(angle) * distance,
+                centerRing.position.y,
+                centerRing.position.z + Math.sin(angle) * distance
+            );
+        };
+
+        // Вспомогательная функция: вычисление точки касания двух колец
+        const getTangentPoint = (ring1, ring2) => {
+            // Вектор от центра ring1 к центру ring2
+            const direction = new THREE.Vector3()
+                .subVectors(ring2.position, ring1.position)
+                .normalize();
+
+            // Точка касания на ring1
+            return new THREE.Vector3()
+                .copy(ring1.position)
+                .add(direction.multiplyScalar(ring1.radius));
+        };
+
+        // Вспомогательная функция: вычисление угла точки на кольце относительно его центра
+        const getAngleOnRing = (ring, point) => {
+            const dx = point.x - ring.position.x;
+            const dz = point.z - ring.position.z;
+            return Math.atan2(dz, dx);
+        };
+
+        // Создаем кольца, касающиеся центрального
+        // Кольцо 2 - справа от центрального
+        const ring2 = new Ring(this.scene, 2.5, getTangentRingPosition(ring1, 2.5, 0));
         this.rings.push(ring2);
 
-        const ring3 = new Ring(this.scene, 2, new THREE.Vector3(-4, 0, 3));
+        // Кольцо 3 - слева сверху
+        const ring3 = new Ring(this.scene, 2, getTangentRingPosition(ring1, 2, Math.PI * 0.75));
         this.rings.push(ring3);
 
-        const ring4 = new Ring(this.scene, 2.5, new THREE.Vector3(2, 0, -5));
+        // Кольцо 4 - снизу справа
+        const ring4 = new Ring(this.scene, 2.3, getTangentRingPosition(ring1, 2.3, Math.PI * 1.65));
         this.rings.push(ring4);
 
-        const ring5 = new Ring(this.scene, 1.8, new THREE.Vector3(-3, 0, -4));
+        // Кольцо 5 - касается кольца 3 (слева от него)
+        const ring5 = new Ring(this.scene, 1.8, getTangentRingPosition(ring3, 1.8, Math.PI * 1.3));
         this.rings.push(ring5);
 
-        // Настраиваем станции пересадки
+        // Создаем станции в точках касания
         // Станция 1: Кольцо 1 и 2
-        const station1Angle1 = 0;
-        const station1Angle2 = Math.PI;
+        const station1Point = getTangentPoint(ring1, ring2);
+        const station1Angle1 = getAngleOnRing(ring1, station1Point);
+        const station1Angle2 = getAngleOnRing(ring2, station1Point);
         ring1.addStation(station1Angle1, [1]);
         ring2.addStation(station1Angle2, [0]);
-
-        const station1Pos = new THREE.Vector3(
-            (ring1.getPointOnRing(station1Angle1).x + ring2.getPointOnRing(station1Angle2).x) / 2,
-            0,
-            (ring1.getPointOnRing(station1Angle1).z + ring2.getPointOnRing(station1Angle2).z) / 2
-        );
-        const station1 = new TransferStation(this.scene, station1Pos, [0, 1]);
+        const station1 = new TransferStation(this.scene, station1Point, [0, 1]);
         this.stations.push(station1);
 
         // Станция 2: Кольцо 1 и 3
-        const station2Angle1 = Math.PI * 1.2;
-        const station2Angle3 = Math.PI * 0.2;
+        const station2Point = getTangentPoint(ring1, ring3);
+        const station2Angle1 = getAngleOnRing(ring1, station2Point);
+        const station2Angle3 = getAngleOnRing(ring3, station2Point);
         ring1.addStation(station2Angle1, [2]);
         ring3.addStation(station2Angle3, [0]);
-
-        const station2Pos = new THREE.Vector3(
-            (ring1.getPointOnRing(station2Angle1).x + ring3.getPointOnRing(station2Angle3).x) / 2,
-            0,
-            (ring1.getPointOnRing(station2Angle1).z + ring3.getPointOnRing(station2Angle3).z) / 2
-        );
-        const station2 = new TransferStation(this.scene, station2Pos, [0, 2]);
+        const station2 = new TransferStation(this.scene, station2Point, [0, 2]);
         this.stations.push(station2);
 
         // Станция 3: Кольцо 1 и 4
-        const station3Angle1 = Math.PI * 1.7;
-        const station3Angle4 = Math.PI * 0.7;
+        const station3Point = getTangentPoint(ring1, ring4);
+        const station3Angle1 = getAngleOnRing(ring1, station3Point);
+        const station3Angle4 = getAngleOnRing(ring4, station3Point);
         ring1.addStation(station3Angle1, [3]);
         ring4.addStation(station3Angle4, [0]);
-
-        const station3Pos = new THREE.Vector3(
-            (ring1.getPointOnRing(station3Angle1).x + ring4.getPointOnRing(station3Angle4).x) / 2,
-            0,
-            (ring1.getPointOnRing(station3Angle1).z + ring4.getPointOnRing(station3Angle4).z) / 2
-        );
-        const station3 = new TransferStation(this.scene, station3Pos, [0, 3]);
+        const station3 = new TransferStation(this.scene, station3Point, [0, 3]);
         this.stations.push(station3);
 
         // Станция 4: Кольцо 3 и 5
-        const station4Angle3 = Math.PI * 1.4;
-        const station4Angle5 = Math.PI * 0.4;
+        const station4Point = getTangentPoint(ring3, ring5);
+        const station4Angle3 = getAngleOnRing(ring3, station4Point);
+        const station4Angle5 = getAngleOnRing(ring5, station4Point);
         ring3.addStation(station4Angle3, [4]);
         ring5.addStation(station4Angle5, [2]);
-
-        const station4Pos = new THREE.Vector3(
-            (ring3.getPointOnRing(station4Angle3).x + ring5.getPointOnRing(station4Angle5).x) / 2,
-            0,
-            (ring3.getPointOnRing(station4Angle3).z + ring5.getPointOnRing(station4Angle5).z) / 2
-        );
-        const station4 = new TransferStation(this.scene, station4Pos, [2, 4]);
+        const station4 = new TransferStation(this.scene, station4Point, [2, 4]);
         this.stations.push(station4);
 
-        // Станция 5: Кольцо 4 и 5
-        const station5Angle4 = Math.PI * 1.3;
-        const station5Angle5 = Math.PI * 1.8;
-        ring4.addStation(station5Angle4, [4]);
-        ring5.addStation(station5Angle5, [3]);
+        // Дополнительная станция: Кольцо 2 и 4 (они тоже должны касаться)
+        // Вычисляем, касаются ли они
+        const dist24 = ring2.position.distanceTo(ring4.position);
+        const shouldTouch24 = Math.abs(dist24 - (ring2.radius + ring4.radius)) < 0.5;
 
-        const station5Pos = new THREE.Vector3(
-            (ring4.getPointOnRing(station5Angle4).x + ring5.getPointOnRing(station5Angle5).x) / 2,
-            0,
-            (ring4.getPointOnRing(station5Angle4).z + ring5.getPointOnRing(station5Angle5).z) / 2
-        );
-        const station5 = new TransferStation(this.scene, station5Pos, [3, 4]);
-        this.stations.push(station5);
+        if (shouldTouch24) {
+            const station5Point = getTangentPoint(ring2, ring4);
+            const station5Angle2 = getAngleOnRing(ring2, station5Point);
+            const station5Angle4 = getAngleOnRing(ring4, station5Point);
+            ring2.addStation(station5Angle2, [3]);
+            ring4.addStation(station5Angle4, [1]);
+            const station5 = new TransferStation(this.scene, station5Point, [1, 3]);
+            this.stations.push(station5);
+        }
 
         // Создаем игрока на первом кольце
         this.player = new PlayerBall(this.scene, ring1, 0);
 
-        // Создаем цель на последнем кольце
+        // Создаем цель на последнем кольце (Ring 5)
         const goalPosition = ring5.getPointOnRing(Math.PI);
         this.goal = new Goal(this.scene, goalPosition);
 
@@ -584,6 +600,48 @@ class RingsGame {
         // Дистанция до цели
         const distance = this.player.mesh.position.distanceTo(this.goal.mesh.position);
         document.getElementById('distance-value').textContent = distance.toFixed(1);
+
+        // Проверяем, находится ли игрок на станции
+        const { station, distance: stationDistance } = this.player.getNearestStation();
+        const transferHint = document.getElementById('transfer-hint');
+        const hintText = document.getElementById('hint-text');
+
+        if (stationDistance < 0.5 && station) {
+            // Игрок на станции - показываем подсказку
+            const availableRings = station.connectedRings
+                .map(idx => idx + 1)
+                .filter(idx => idx !== currentRingIndex)
+                .join(', ');
+
+            if (availableRings) {
+                hintText.textContent = `⚠️ СТАНЦИЯ! Нажмите ${availableRings} для пересадки или SPACE для смены направления`;
+                transferHint.classList.add('visible');
+            }
+
+            // Подсвечиваем активную станцию
+            this.stations.forEach(s => {
+                if (s === this.findStationAtPosition(station.position)) {
+                    s.mesh.material.emissiveIntensity = 1.0;
+                    s.mesh.scale.set(1.5, 1.5, 1.5);
+                } else {
+                    s.mesh.material.emissiveIntensity = 0.5;
+                    // Сохраняем пульсацию для других станций
+                }
+            });
+        } else {
+            // Игрок не на станции - скрываем подсказку
+            transferHint.classList.remove('visible');
+
+            // Возвращаем нормальное отображение станций
+            this.stations.forEach(s => {
+                s.mesh.material.emissiveIntensity = 0.5;
+            });
+        }
+    }
+
+    findStationAtPosition(position) {
+        // Находим станцию по позиции
+        return this.stations.find(s => s.position.distanceTo(position) < 0.1);
     }
 
     update(deltaTime) {

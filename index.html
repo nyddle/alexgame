@@ -58,6 +58,31 @@
             font-weight: bold;
         }
 
+        #transfer-hint {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 235, 59, 0.95);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            display: none;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        #transfer-hint.visible {
+            display: block;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+        }
+
         #controls-panel {
             position: absolute;
             bottom: 20px;
@@ -149,6 +174,10 @@
             <p>Текущее кольцо: <span class="stat-value" id="current-ring">1</span></p>
             <p>Статус: <span class="stat-value" id="ring-status">Нормальное</span></p>
             <p>Дистанция до цели: <span class="stat-value" id="distance-value">-</span></p>
+        </div>
+
+        <div id="transfer-hint">
+            <div id="hint-text">⚠️ На станции! Нажмите 1-5 для пересадки или SPACE для смены направления</div>
         </div>
 
         <div id="controls-panel">
