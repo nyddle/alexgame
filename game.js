@@ -279,6 +279,10 @@ class RingsGame {
         this.init();
         this.setupGame();
         this.setupEventListeners();
+
+        // Показываем приветственное сообщение
+        this.showMessage('Добро пожаловать в игру "Кольца"!', 'Начать игру', () => this.startGame());
+
         this.animate();
     }
 
