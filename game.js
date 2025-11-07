@@ -505,6 +505,11 @@ class RingsGame {
             }
         }
 
+        // Быстрая пересадка на соседнее кольцо (клавиша C)
+        if (key === 'c') {
+            this.quickTransfer();
+        }
+
         // Переход на другое кольцо
         if (key >= '1' && key <= '5') {
             const targetRingIndex = parseInt(key) - 1;
@@ -517,6 +522,29 @@ class RingsGame {
         if (key === 'r') {
             this.resetGame();
         }
+    }
+
+    quickTransfer() {
+        const { station, distance } = this.player.getNearestStation();
+
+        // Проверяем, на станции ли мы
+        if (distance > 0.5 || !station) {
+            return; // Не на станции
+        }
+
+        // Получаем текущий индекс кольца
+        const currentRingIndex = this.rings.indexOf(this.player.currentRing);
+
+        // Находим доступные кольца для пересадки (исключая текущее)
+        const availableRings = station.connectedRings.filter(idx => idx !== currentRingIndex);
+
+        if (availableRings.length === 0) {
+            return; // Нет доступных колец
+        }
+
+        // Переходим на первое доступное кольцо
+        const targetRingIndex = availableRings[0];
+        this.tryTransferToRing(targetRingIndex);
     }
 
     tryTransferToRing(targetRingIndex) {
@@ -610,11 +638,11 @@ class RingsGame {
             // Игрок на станции - показываем подсказку
             const availableRings = station.connectedRings
                 .map(idx => idx + 1)
-                .filter(idx => idx !== currentRingIndex)
-                .join(', ');
+                .filter(idx => idx !== currentRingIndex);
 
-            if (availableRings) {
-                hintText.textContent = `⚠️ СТАНЦИЯ! Нажмите ${availableRings} для пересадки или SPACE для смены направления`;
+            if (availableRings.length > 0) {
+                const ringsText = availableRings.join(', ');
+                hintText.textContent = `⚠️ СТАНЦИЯ! Нажмите C для пересадки (${ringsText}) или SPACE для смены направления`;
                 transferHint.classList.add('visible');
             }
 
