@@ -275,6 +275,7 @@ class RingsGame {
         this.gameFinished = false;
 
         this.lastTime = performance.now();
+        this.lastTransferIndex = 0; // Индекс для циклического переключения между доступными кольцами
 
         this.init();
         this.setupGame();
@@ -337,124 +338,105 @@ class RingsGame {
     }
 
     setupGame() {
-        // Создаем систему колец, которые касаются друг друга
-        // Центральное кольцо
-        const ring1 = new Ring(this.scene, 3, new THREE.Vector3(0, 0, 0));
-        this.rings.push(ring1);
+        // Создаем плотнейшую укладку колец (hexagonal packing) - треугольная конфигурация
+        // Как бильярдные шары в треугольнике
 
-        // Вспомогательная функция: вычисление позиции центра кольца, касающегося другого кольца
-        // angle - угол направления от центра первого кольца (в плоскости XZ)
-        const getTangentRingPosition = (centerRing, newRadius, angle) => {
-            const distance = centerRing.radius + newRadius; // Расстояние между центрами для касания
-            return new THREE.Vector3(
-                centerRing.position.x + Math.cos(angle) * distance,
-                centerRing.position.y,
-                centerRing.position.z + Math.sin(angle) * distance
-            );
-        };
+        const RING_RADIUS = 2.0; // Радиус всех колец одинаковый
+        const RING_DISTANCE = RING_RADIUS * 2; // Расстояние между центрами касающихся колец
+        const VERTICAL_SPACING = RING_DISTANCE * Math.sqrt(3) / 2; // Вертикальное расстояние для гексагональной решетки
 
-        // Вспомогательная функция: вычисление точки касания двух колец
+        // Вспомогательные функции
         const getTangentPoint = (ring1, ring2) => {
-            // Вектор от центра ring1 к центру ring2
             const direction = new THREE.Vector3()
                 .subVectors(ring2.position, ring1.position)
                 .normalize();
-
-            // Точка касания на ring1
             return new THREE.Vector3()
                 .copy(ring1.position)
                 .add(direction.multiplyScalar(ring1.radius));
         };
 
-        // Вспомогательная функция: вычисление угла точки на кольце относительно его центра
         const getAngleOnRing = (ring, point) => {
             const dx = point.x - ring.position.x;
             const dz = point.z - ring.position.z;
             return Math.atan2(dz, dx);
         };
 
-        // Создаем кольца, касающиеся центрального
-        // Кольцо 2 - справа от центрального
-        const ring2 = new Ring(this.scene, 2.5, getTangentRingPosition(ring1, 2.5, 0));
-        this.rings.push(ring2);
+        // Создаем треугольную структуру из 15 колец (5 рядов)
+        // Ряд 1: 1 кольцо
+        // Ряд 2: 2 кольца
+        // Ряд 3: 3 кольца
+        // Ряд 4: 4 кольца
+        // Ряд 5: 5 колец
 
-        // Кольцо 3 - слева сверху
-        const ring3 = new Ring(this.scene, 2, getTangentRingPosition(ring1, 2, Math.PI * 0.75));
-        this.rings.push(ring3);
+        const numRows = 5;
+        let ringIndex = 0;
 
-        // Кольцо 4 - снизу справа
-        const ring4 = new Ring(this.scene, 2.3, getTangentRingPosition(ring1, 2.3, Math.PI * 1.65));
-        this.rings.push(ring4);
+        // Центрируем треугольник относительно начала координат
+        const totalHeight = (numRows - 1) * VERTICAL_SPACING;
+        const startZ = -totalHeight / 2;
 
-        // Кольцо 5 - касается кольца 3 (слева от него)
-        const ring5 = new Ring(this.scene, 1.8, getTangentRingPosition(ring3, 1.8, Math.PI * 1.3));
-        this.rings.push(ring5);
+        for (let row = 0; row < numRows; row++) {
+            const numRingsInRow = row + 1;
+            const rowWidth = (numRingsInRow - 1) * RING_DISTANCE;
+            const startX = -rowWidth / 2;
+            const z = startZ + row * VERTICAL_SPACING;
 
-        // Создаем станции в точках касания
-        // Станция 1: Кольцо 1 и 2
-        const station1Point = getTangentPoint(ring1, ring2);
-        const station1Angle1 = getAngleOnRing(ring1, station1Point);
-        const station1Angle2 = getAngleOnRing(ring2, station1Point);
-        ring1.addStation(station1Angle1, [1]);
-        ring2.addStation(station1Angle2, [0]);
-        const station1 = new TransferStation(this.scene, station1Point, [0, 1]);
-        this.stations.push(station1);
-
-        // Станция 2: Кольцо 1 и 3
-        const station2Point = getTangentPoint(ring1, ring3);
-        const station2Angle1 = getAngleOnRing(ring1, station2Point);
-        const station2Angle3 = getAngleOnRing(ring3, station2Point);
-        ring1.addStation(station2Angle1, [2]);
-        ring3.addStation(station2Angle3, [0]);
-        const station2 = new TransferStation(this.scene, station2Point, [0, 2]);
-        this.stations.push(station2);
-
-        // Станция 3: Кольцо 1 и 4
-        const station3Point = getTangentPoint(ring1, ring4);
-        const station3Angle1 = getAngleOnRing(ring1, station3Point);
-        const station3Angle4 = getAngleOnRing(ring4, station3Point);
-        ring1.addStation(station3Angle1, [3]);
-        ring4.addStation(station3Angle4, [0]);
-        const station3 = new TransferStation(this.scene, station3Point, [0, 3]);
-        this.stations.push(station3);
-
-        // Станция 4: Кольцо 3 и 5
-        const station4Point = getTangentPoint(ring3, ring5);
-        const station4Angle3 = getAngleOnRing(ring3, station4Point);
-        const station4Angle5 = getAngleOnRing(ring5, station4Point);
-        ring3.addStation(station4Angle3, [4]);
-        ring5.addStation(station4Angle5, [2]);
-        const station4 = new TransferStation(this.scene, station4Point, [2, 4]);
-        this.stations.push(station4);
-
-        // Дополнительная станция: Кольцо 2 и 4 (они тоже должны касаться)
-        // Вычисляем, касаются ли они
-        const dist24 = ring2.position.distanceTo(ring4.position);
-        const shouldTouch24 = Math.abs(dist24 - (ring2.radius + ring4.radius)) < 0.5;
-
-        if (shouldTouch24) {
-            const station5Point = getTangentPoint(ring2, ring4);
-            const station5Angle2 = getAngleOnRing(ring2, station5Point);
-            const station5Angle4 = getAngleOnRing(ring4, station5Point);
-            ring2.addStation(station5Angle2, [3]);
-            ring4.addStation(station5Angle4, [1]);
-            const station5 = new TransferStation(this.scene, station5Point, [1, 3]);
-            this.stations.push(station5);
+            for (let col = 0; col < numRingsInRow; col++) {
+                const x = startX + col * RING_DISTANCE;
+                const position = new THREE.Vector3(x, 0, z);
+                const ring = new Ring(this.scene, RING_RADIUS, position);
+                this.rings.push(ring);
+                ringIndex++;
+            }
         }
 
-        // Создаем игрока на первом кольце
-        this.player = new PlayerBall(this.scene, ring1, 0);
+        console.log(`Создано ${this.rings.length} колец`);
 
-        // Создаем цель на последнем кольце (Ring 5)
-        const goalPosition = ring5.getPointOnRing(Math.PI);
+        // Автоматически находим все касания между кольцами
+        const CONTACT_THRESHOLD = RING_DISTANCE * 1.1; // Небольшой допуск для определения касания
+
+        for (let i = 0; i < this.rings.length; i++) {
+            for (let j = i + 1; j < this.rings.length; j++) {
+                const ring1 = this.rings[i];
+                const ring2 = this.rings[j];
+
+                const distance = ring1.position.distanceTo(ring2.position);
+
+                // Проверяем, касаются ли кольца
+                if (Math.abs(distance - RING_DISTANCE) < 0.1) {
+                    // Кольца касаются! Создаем станцию
+
+                    const tangentPoint = getTangentPoint(ring1, ring2);
+                    const angle1 = getAngleOnRing(ring1, tangentPoint);
+                    const angle2 = getAngleOnRing(ring2, tangentPoint);
+
+                    // Добавляем станции на кольца
+                    ring1.addStation(angle1, [j]);
+                    ring2.addStation(angle2, [i]);
+
+                    // Создаем визуальную станцию
+                    const station = new TransferStation(this.scene, tangentPoint, [i, j]);
+                    this.stations.push(station);
+                }
+            }
+        }
+
+        console.log(`Создано ${this.stations.length} станций пересадки`);
+
+        // Создаем игрока на первом кольце (вершина треугольника)
+        this.player = new PlayerBall(this.scene, this.rings[0], 0);
+
+        // Создаем цель на последнем кольце (правый нижний угол треугольника)
+        const lastRing = this.rings[this.rings.length - 1];
+        const goalPosition = lastRing.getPointOnRing(Math.PI);
         this.goal = new Goal(this.scene, goalPosition);
 
-        // Устанавливаем начальные статусы колец
-        ring1.setStatus('NORMAL');
-        ring2.setStatus('FAST');
-        ring3.setStatus('NORMAL');
-        ring4.setStatus('SLOW');
-        ring5.setStatus('NORMAL');
+        // Устанавливаем случайные начальные статусы колец
+        const statuses = ['NORMAL', 'FAST', 'SLOW', 'NORMAL', 'NORMAL']; // Больше нормальных для баланса
+        this.rings.forEach((ring, index) => {
+            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            ring.setStatus(randomStatus);
+        });
 
         // Запускаем систему динамического изменения статусов
         this.startStatusChangeSystem();
@@ -506,16 +488,9 @@ class RingsGame {
         }
 
         // Быстрая пересадка на соседнее кольцо (клавиша C)
+        // Циклически переключается между доступными кольцами при повторных нажатиях
         if (key === 'c') {
             this.quickTransfer();
-        }
-
-        // Переход на другое кольцо
-        if (key >= '1' && key <= '5') {
-            const targetRingIndex = parseInt(key) - 1;
-            if (targetRingIndex >= 0 && targetRingIndex < this.rings.length) {
-                this.tryTransferToRing(targetRingIndex);
-            }
         }
 
         // Перезапуск игры
@@ -529,6 +504,7 @@ class RingsGame {
 
         // Проверяем, на станции ли мы
         if (distance > 0.5 || !station) {
+            this.lastTransferIndex = 0;
             return; // Не на станции
         }
 
@@ -542,8 +518,12 @@ class RingsGame {
             return; // Нет доступных колец
         }
 
-        // Переходим на первое доступное кольцо
-        const targetRingIndex = availableRings[0];
+        // Циклически переключаемся между доступными кольцами
+        const targetRingIndex = availableRings[this.lastTransferIndex % availableRings.length];
+
+        // Сохраняем индекс для следующего нажатия
+        this.lastTransferIndex = (this.lastTransferIndex + 1) % availableRings.length;
+
         this.tryTransferToRing(targetRingIndex);
     }
 
@@ -582,20 +562,17 @@ class RingsGame {
         this.gameFinished = false;
         this.gameStarted = false;
         this.gameTime = 0;
+        this.lastTransferIndex = 0;
 
         // Сброс позиции игрока
         this.player.switchToRing(this.rings[0], 0);
         this.player.direction = 1;
 
-        // Сброс статусов колец
-        this.rings.forEach((ring, index) => {
-            if (index === 0 || index === 2 || index === 4) {
-                ring.setStatus('NORMAL');
-            } else if (index === 1) {
-                ring.setStatus('FAST');
-            } else {
-                ring.setStatus('SLOW');
-            }
+        // Сброс статусов колец - случайные статусы
+        const statuses = ['NORMAL', 'FAST', 'SLOW', 'NORMAL', 'NORMAL'];
+        this.rings.forEach((ring) => {
+            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            ring.setStatus(randomStatus);
         });
 
         this.showMessage('Игра перезапущена!', 'Начать заново', () => this.startGame());
