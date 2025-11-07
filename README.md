@@ -221,8 +221,118 @@ alexgame/
 ├── game.js             # Логика игры на Three.js
 ├── README.md           # Документация
 ├── start-server.sh     # Скрипт запуска для macOS/Linux
-└── start-server.bat    # Скрипт запуска для Windows
+├── start-server.bat    # Скрипт запуска для Windows
+├── server.js           # Express сервер для Heroku
+├── package.json        # Зависимости Node.js
+├── Procfile            # Конфигурация Heroku
+└── .gitignore          # Игнорируемые файлы Git
 ```
+
+## 🌍 Развертывание в интернете
+
+### 🟢 Вариант 1: GitHub Pages (РЕКОМЕНДУЕТСЯ - проще!)
+
+GitHub Pages идеально подходит для статических сайтов и **абсолютно бесплатно**!
+
+**Шаги:**
+
+1. Убедитесь, что код закоммичен:
+```bash
+git add .
+git commit -m "Готово к деплою"
+git push origin main
+```
+
+2. Перейдите в настройки репозитория на GitHub:
+   - Settings → Pages
+   - Source: Deploy from a branch
+   - Branch: `main` или ваша ветка → `/` (root)
+   - Нажмите Save
+
+3. Через 1-2 минуты игра будет доступна по адресу:
+   ```
+   https://ваш-username.github.io/alexgame/
+   ```
+
+**Преимущества:**
+- ✅ Бесплатно
+- ✅ Автоматический деплой при push
+- ✅ HTTPS из коробки
+- ✅ Нет необходимости в сервере
+
+### 🔵 Вариант 2: Heroku
+
+**Шаги:**
+
+1. Установите Heroku CLI:
+```bash
+# macOS
+brew tap heroku/brew && brew install heroku
+
+# Windows/Linux
+# Скачайте с https://devcenter.heroku.com/articles/heroku-cli
+```
+
+2. Войдите в Heroku:
+```bash
+heroku login
+```
+
+3. Создайте приложение Heroku:
+```bash
+heroku create rings-game-yourname
+# или просто
+heroku create
+```
+
+4. Установите зависимости локально (для проверки):
+```bash
+npm install
+npm start  # Проверьте на localhost:8000
+```
+
+5. Задеплойте на Heroku:
+```bash
+git add .
+git commit -m "Deploy to Heroku"
+git push heroku main
+# или если работаете на другой ветке:
+git push heroku your-branch:main
+```
+
+6. Откройте приложение:
+```bash
+heroku open
+```
+
+**Полезные команды:**
+```bash
+heroku logs --tail           # Просмотр логов
+heroku ps                    # Статус приложения
+heroku restart              # Перезапуск
+```
+
+**Примечания:**
+- Heroku бесплатный tier больше не доступен с 2022 года
+- Минимальная цена: $5/месяц (Eco dyno)
+
+### 🟣 Вариант 3: Netlify / Vercel
+
+Альтернативы с бесплатными планами:
+
+**Netlify:**
+```bash
+npm install -g netlify-cli
+netlify deploy
+```
+
+**Vercel:**
+```bash
+npm install -g vercel
+vercel
+```
+
+Оба сервиса автоматически деплоят при push в GitHub!
 
 ## 🐛 Решение проблем
 
