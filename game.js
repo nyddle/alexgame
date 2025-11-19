@@ -346,6 +346,7 @@ class RingsGame {
 
         this.lastTime = performance.now();
         this.lastTransferIndex = 0; // Индекс для циклического переключения между доступными кольцами
+        this.selectedLayout = 'triangular'; // По умолчанию треугольная структура
 
         this.init();
         this.setupGame();
@@ -408,6 +409,18 @@ class RingsGame {
     }
 
     setupGame() {
+        // Выбираем конфигурацию в зависимости от выбранного layout
+        if (this.selectedLayout === 'triangular') {
+            this.setupTriangularLayout();
+        } else if (this.selectedLayout === 'irregular') {
+            this.setupIrregularLayout();
+        }
+
+        // Запускаем систему динамического изменения статусов
+        this.startStatusChangeSystem();
+    }
+
+    setupTriangularLayout() {
         // Создаем плотнейшую укладку колец (hexagonal packing) - треугольная конфигурация
         // Как бильярдные шары в треугольнике
 
@@ -507,9 +520,119 @@ class RingsGame {
             const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
             ring.setStatus(randomStatus);
         });
+    }
 
-        // Запускаем систему динамического изменения статусов
-        this.startStatusChangeSystem();
+    setupIrregularLayout() {
+        // Создаем нерегулярную (случайную) структуру колец
+        const RING_RADIUS = 2.0;
+        const RING_DISTANCE = RING_RADIUS * 2;
+        const MIN_DISTANCE = RING_DISTANCE * 0.95; // Минимальное расстояние между центрами
+        const MAX_DISTANCE = RING_DISTANCE * 1.05; // Максимальное для создания касания
+
+        const NUM_RINGS = 15; // Примерно столько же, сколько в треугольнике
+        const FIELD_SIZE = 12; // Размер поля для размещения
+
+        // Вспомогательные функции
+        const getTangentPoint = (ring1, ring2) => {
+            const direction = new THREE.Vector3()
+                .subVectors(ring2.position, ring1.position)
+                .normalize();
+            return new THREE.Vector3()
+                .copy(ring1.position)
+                .add(direction.multiplyScalar(ring1.radius));
+        };
+
+        const getAngleOnRing = (ring, point) => {
+            const dx = point.x - ring.position.x;
+            const dz = point.z - ring.position.z;
+            return Math.atan2(dz, dx);
+        };
+
+        // Создаем первое кольцо в центре
+        const firstRing = new Ring(this.scene, RING_RADIUS, new THREE.Vector3(0, 0, 0));
+        this.rings.push(firstRing);
+
+        // Создаем остальные кольца случайным образом, но так чтобы они касались хотя бы 2-х других
+        let attempts = 0;
+        const MAX_ATTEMPTS = 1000;
+
+        while (this.rings.length < NUM_RINGS && attempts < MAX_ATTEMPTS) {
+            attempts++;
+
+            // Генерируем случайную позицию
+            const x = (Math.random() - 0.5) * FIELD_SIZE;
+            const z = (Math.random() - 0.5) * FIELD_SIZE;
+            const position = new THREE.Vector3(x, 0, z);
+
+            // Проверяем, что новое кольцо не пересекается с существующими
+            let tooClose = false;
+            let touchingRings = [];
+
+            for (let i = 0; i < this.rings.length; i++) {
+                const distance = position.distanceTo(this.rings[i].position);
+
+                if (distance < MIN_DISTANCE) {
+                    tooClose = true;
+                    break;
+                }
+
+                // Проверяем касание
+                if (distance <= MAX_DISTANCE) {
+                    touchingRings.push(i);
+                }
+            }
+
+            // Добавляем кольцо только если оно касается минимум 1 кольца (для первых) или 2+ для остальных
+            const minTouches = this.rings.length <= 3 ? 1 : 2;
+            if (!tooClose && touchingRings.length >= minTouches) {
+                const ring = new Ring(this.scene, RING_RADIUS, position);
+                this.rings.push(ring);
+                attempts = 0; // Сбрасываем счетчик при успехе
+            }
+        }
+
+        console.log(`Создано ${this.rings.length} колец (нерегулярная структура)`);
+
+        // Автоматически находим все касания между кольцами
+        for (let i = 0; i < this.rings.length; i++) {
+            for (let j = i + 1; j < this.rings.length; j++) {
+                const ring1 = this.rings[i];
+                const ring2 = this.rings[j];
+
+                const distance = ring1.position.distanceTo(ring2.position);
+
+                // Проверяем, касаются ли кольца (с небольшим допуском)
+                if (Math.abs(distance - RING_DISTANCE) < 0.2) {
+                    const tangentPoint = getTangentPoint(ring1, ring2);
+                    const angle1 = getAngleOnRing(ring1, tangentPoint);
+                    const angle2 = getAngleOnRing(ring2, tangentPoint);
+
+                    ring1.addStation(angle1, [j]);
+                    ring2.addStation(angle2, [i]);
+
+                    const station = new TransferStation(this.scene, tangentPoint, [i, j]);
+                    this.stations.push(station);
+                }
+            }
+        }
+
+        console.log(`Создано ${this.stations.length} станций пересадки (нерегулярная структура)`);
+
+        // Создаем игрока на первом кольце
+        this.player = new PlayerBall(this.scene, this.rings[0], 0);
+
+        // Создаем цель на случайном кольце (не на первом)
+        const randomRingIndex = Math.floor(Math.random() * (this.rings.length - 1)) + 1;
+        const goalRing = this.rings[randomRingIndex];
+        const goalPosition = goalRing.getPointOnRing(Math.random() * Math.PI * 2);
+        this.goal = new Goal(this.scene, goalPosition);
+
+        // Устанавливаем случайные начальные статусы колец
+        const statuses = ['NORMAL', 'FAST', 'SLOW', 'NORMAL', 'NORMAL'];
+        this.rings.forEach((ring) => {
+            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            ring.setStatus(randomStatus);
+        });
     }
 
     startStatusChangeSystem() {
@@ -542,6 +665,58 @@ class RingsGame {
         document.getElementById('start-button').addEventListener('click', () => {
             this.startGame();
         });
+
+        // Кнопки выбора конфигурации
+        const layoutButtons = document.querySelectorAll('.layout-button');
+        layoutButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Убираем выделение со всех кнопок
+                layoutButtons.forEach(btn => btn.classList.remove('selected'));
+
+                // Выделяем текущую кнопку
+                button.classList.add('selected');
+
+                // Сохраняем выбранную конфигурацию
+                this.selectedLayout = button.getAttribute('data-layout');
+
+                // Пересоздаем игровое поле с новой конфигурацией
+                this.recreateGameField();
+            });
+        });
+    }
+
+    recreateGameField() {
+        // Очищаем старые кольца
+        this.rings.forEach(ring => {
+            this.scene.remove(ring.mesh);
+            this.scene.remove(ring.glowMesh);
+            ring.directionMarkers.forEach(marker => this.scene.remove(marker));
+        });
+
+        // Очищаем станции
+        this.stations.forEach(station => {
+            this.scene.remove(station.mesh);
+        });
+
+        // Очищаем цель
+        if (this.goal) {
+            this.scene.remove(this.goal.mesh);
+            this.goal.rings.forEach(ring => this.scene.remove(ring));
+        }
+
+        // Очищаем игрока
+        if (this.player) {
+            this.scene.remove(this.player.mesh);
+        }
+
+        // Очищаем массивы
+        this.rings = [];
+        this.stations = [];
+        this.player = null;
+        this.goal = null;
+
+        // Создаем новое игровое поле
+        this.setupGame();
     }
 
     onKeyDown(event) {

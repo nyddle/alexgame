@@ -113,6 +113,44 @@
             color: #ffeb3b;
         }
 
+        .layout-options {
+            margin: 20px 0;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .layout-button {
+            padding: 15px 25px;
+            font-size: 16px;
+            background: rgba(79, 195, 247, 0.2);
+            border: 2px solid #4fc3f7;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s;
+            min-width: 200px;
+        }
+
+        .layout-button:hover {
+            background: rgba(79, 195, 247, 0.4);
+            transform: scale(1.05);
+        }
+
+        .layout-button.selected {
+            background: rgba(79, 195, 247, 0.6);
+            border-color: #ffeb3b;
+            box-shadow: 0 0 20px rgba(255, 235, 59, 0.5);
+        }
+
+        .layout-description {
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
         #game-message {
             position: absolute;
             top: 50%;
@@ -189,6 +227,16 @@
 
         <div id="game-message">
             <div id="message-text">Добро пожаловать в игру "Кольца"!</div>
+            <div class="layout-options">
+                <button class="layout-button selected" data-layout="triangular">
+                    <div>📐 Треугольная</div>
+                    <div class="layout-description">15 колец в плотнейшей укладке</div>
+                </button>
+                <button class="layout-button" data-layout="irregular">
+                    <div>🎲 Нерегулярная</div>
+                    <div class="layout-description">Случайное расположение колец</div>
+                </button>
+            </div>
             <button id="start-button">Начать игру</button>
         </div>
     </div>
