@@ -363,6 +363,7 @@ class RingsGame {
         this.lastTime = performance.now();
         this.lastTransferIndex = 0; // Индекс для циклического переключения между доступными кольцами
         this.selectedLayout = 'triangular'; // По умолчанию треугольная структура
+        this.selectedSize = 15; // По умолчанию 15 колец
 
         this.init();
         this.setupGame();
@@ -387,7 +388,7 @@ class RingsGame {
             0.1,
             1000
         );
-        this.camera.position.set(0, 15, 15);
+        this.updateCameraForFieldSize();
         this.camera.lookAt(0, 0, 0);
 
         // Создаем рендерер
@@ -422,6 +423,19 @@ class RingsGame {
 
         // Обработка изменения размера окна
         window.addEventListener('resize', () => this.onWindowResize());
+    }
+
+    updateCameraForFieldSize() {
+        // Масштабируем позицию камеры в зависимости от размера поля
+        const scale = Math.sqrt(this.selectedSize / 15); // Для 15 колец scale=1
+        const distance = 15 * scale;
+        this.camera.position.set(0, distance, distance);
+
+        // Обновляем контроллеры если они уже созданы
+        if (this.controls) {
+            this.controls.maxDistance = distance * 3;
+            this.controls.update();
+        }
     }
 
     setupGame() {
@@ -463,14 +477,16 @@ class RingsGame {
             return Math.atan2(dz, dx);
         };
 
-        // Создаем треугольную структуру из 15 колец (5 рядов)
-        // Ряд 1: 1 кольцо
-        // Ряд 2: 2 кольца
-        // Ряд 3: 3 кольца
-        // Ряд 4: 4 кольца
-        // Ряд 5: 5 колец
+        // Вычисляем количество рядов для заданного количества колец
+        // Для треугольного числа n*(n+1)/2 = targetCount
+        // n = (-1 + sqrt(1 + 8*targetCount)) / 2
+        const getRowsForRingCount = (targetCount) => {
+            const n = (-1 + Math.sqrt(1 + 8 * targetCount)) / 2;
+            return Math.round(n);
+        };
 
-        const numRows = 5;
+        const numRows = getRowsForRingCount(this.selectedSize);
+        console.log(`Создаем треугольник из ${numRows} рядов (примерно ${this.selectedSize} колец)`);
         let ringIndex = 0;
 
         // Центрируем треугольник относительно начала координат
@@ -548,8 +564,9 @@ class RingsGame {
         const MIN_DISTANCE = RING_DISTANCE * 0.95; // Минимальное расстояние между центрами
         const MAX_DISTANCE = RING_DISTANCE * 1.05; // Максимальное для создания касания
 
-        const NUM_RINGS = 15; // Примерно столько же, сколько в треугольнике
-        const FIELD_SIZE = 12; // Размер поля для размещения
+        const NUM_RINGS = this.selectedSize; // Используем выбранный размер
+        // Размер поля масштабируется в зависимости от количества колец
+        const FIELD_SIZE = 12 + Math.sqrt(NUM_RINGS - 15) * 4;
 
         // Вспомогательные функции
         const getTangentPoint = (ring1, ring2) => {
@@ -573,7 +590,7 @@ class RingsGame {
 
         // Создаем остальные кольца случайным образом, но так чтобы они касались хотя бы 2-х других
         let attempts = 0;
-        const MAX_ATTEMPTS = 1000;
+        const MAX_ATTEMPTS = 1000 + NUM_RINGS * 50; // Больше попыток для больших полей
 
         while (this.rings.length < NUM_RINGS && attempts < MAX_ATTEMPTS) {
             attempts++;
@@ -712,6 +729,24 @@ class RingsGame {
                 this.recreateGameField();
             });
         });
+
+        // Кнопки выбора размера поля
+        const sizeButtons = document.querySelectorAll('.size-button');
+        sizeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Убираем выделение со всех кнопок
+                sizeButtons.forEach(btn => btn.classList.remove('selected'));
+
+                // Выделяем текущую кнопку
+                button.classList.add('selected');
+
+                // Сохраняем выбранный размер
+                this.selectedSize = parseInt(button.getAttribute('data-size'));
+
+                // Пересоздаем игровое поле с новым размером
+                this.recreateGameField();
+            });
+        });
     }
 
     recreateGameField() {
@@ -743,6 +778,9 @@ class RingsGame {
         this.stations = [];
         this.player = null;
         this.goal = null;
+
+        // Обновляем камеру для нового размера поля
+        this.updateCameraForFieldSize();
 
         // Создаем новое игровое поле
         this.setupGame();

@@ -151,6 +151,45 @@
             opacity: 0.8;
         }
 
+        .size-options {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .size-button {
+            padding: 10px 20px;
+            font-size: 14px;
+            background: rgba(139, 195, 74, 0.2);
+            border: 2px solid #8bc34a;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s;
+            min-width: 100px;
+        }
+
+        .size-button:hover {
+            background: rgba(139, 195, 74, 0.4);
+            transform: scale(1.05);
+        }
+
+        .size-button.selected {
+            background: rgba(139, 195, 74, 0.6);
+            border-color: #ffeb3b;
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.5);
+        }
+
+        .options-label {
+            color: #4fc3f7;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
         #game-message {
             position: absolute;
             top: 50%;
@@ -227,16 +266,35 @@
 
         <div id="game-message">
             <div id="message-text">Добро пожаловать в игру "Кольца"!</div>
+
+            <div class="options-label">Конфигурация:</div>
             <div class="layout-options">
                 <button class="layout-button selected" data-layout="triangular">
                     <div>📐 Треугольная</div>
-                    <div class="layout-description">15 колец в плотнейшей укладке</div>
+                    <div class="layout-description">Плотнейшая укладка</div>
                 </button>
                 <button class="layout-button" data-layout="irregular">
                     <div>🎲 Нерегулярная</div>
-                    <div class="layout-description">Случайное расположение колец</div>
+                    <div class="layout-description">Случайное расположение</div>
                 </button>
             </div>
+
+            <div class="options-label">Размер поля:</div>
+            <div class="size-options">
+                <button class="size-button selected" data-size="15">
+                    <div>🟢 Малый</div>
+                    <div class="layout-description">15 колец</div>
+                </button>
+                <button class="size-button" data-size="30">
+                    <div>🟡 Средний</div>
+                    <div class="layout-description">30 колец</div>
+                </button>
+                <button class="size-button" data-size="60">
+                    <div>🔴 Большой</div>
+                    <div class="layout-description">60 колец</div>
+                </button>
+            </div>
+
             <button id="start-button">Начать игру</button>
         </div>
     </div>
