@@ -18,6 +18,7 @@ class Ring {
         this.segments = segments;
         this.tubeRadius = tubeRadius;
         this.status = 'NORMAL';
+        this.direction = Math.random() > 0.5 ? 1 : -1; // Направление потока: 1 = по часовой, -1 = против
         this.stations = []; // Станции пересадки на этом кольце
         this.directionMarkers = []; // Маркеры направления движения
         this.markerPhase = Math.random() * Math.PI * 2; // Случайная начальная фаза для разнообразия
@@ -92,7 +93,7 @@ class Ring {
     update(deltaTime) {
         // Анимируем маркеры направления
         const statusInfo = RING_STATUSES[this.status];
-        const rotationSpeed = statusInfo.speed * 0.3; // Скорость вращения маркеров
+        const rotationSpeed = statusInfo.speed * 0.3 * this.direction; // Скорость с учетом направления
 
         this.markerPhase += rotationSpeed * deltaTime * 2;
 
@@ -105,13 +106,28 @@ class Ring {
             marker.position.x = markerPos.x;
             marker.position.z = markerPos.z;
 
-            // Обновляем поворот стрелки
-            marker.rotation.z = currentAngle + Math.PI / 2;
+            // Обновляем поворот стрелки (с учетом направления)
+            const arrowDirection = this.direction > 0 ? 1 : -1;
+            marker.rotation.z = currentAngle + Math.PI / 2 * arrowDirection;
 
             // Пульсация прозрачности для визуального эффекта
             const pulsePhase = (currentAngle + Date.now() * 0.002) % (Math.PI * 2);
             marker.material.opacity = 0.4 + Math.sin(pulsePhase) * 0.2;
         });
+    }
+
+    reverseDirection() {
+        // Меняем направление потока на кольце
+        this.direction *= -1;
+
+        // Визуальный эффект смены направления - кратковременная вспышка
+        this.material.emissiveIntensity = 0.8;
+        this.glowMesh.material.opacity = 0.6;
+
+        setTimeout(() => {
+            this.material.emissiveIntensity = 0.3;
+            this.glowMesh.material.opacity = 0.2;
+        }, 300);
     }
 
     setStatus(status) {
@@ -418,6 +434,9 @@ class RingsGame {
 
         // Запускаем систему динамического изменения статусов
         this.startStatusChangeSystem();
+
+        // Запускаем систему случайного изменения направления вращения
+        this.startDirectionChangeSystem();
     }
 
     setupTriangularLayout() {
@@ -655,6 +674,16 @@ class RingsGame {
                 }, 2000);
             }
         }, 3000);
+    }
+
+    startDirectionChangeSystem() {
+        // Меняем направление вращения случайных колец
+        setInterval(() => {
+            if (!this.gameStarted || this.gameFinished) return;
+
+            const randomRing = this.rings[Math.floor(Math.random() * this.rings.length)];
+            randomRing.reverseDirection();
+        }, 5000); // Каждые 5 секунд меняем направление случайного кольца
     }
 
     setupEventListeners() {
