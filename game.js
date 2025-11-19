@@ -19,8 +19,11 @@ class Ring {
         this.tubeRadius = tubeRadius;
         this.status = 'NORMAL';
         this.stations = []; // Станции пересадки на этом кольце
+        this.directionMarkers = []; // Маркеры направления движения
+        this.markerPhase = Math.random() * Math.PI * 2; // Случайная начальная фаза для разнообразия
 
         this.createRing();
+        this.createDirectionMarkers();
     }
 
     createRing() {
@@ -52,12 +55,79 @@ class Ring {
         this.scene.add(this.glowMesh);
     }
 
+    createDirectionMarkers() {
+        // Создаем маркеры направления (стрелки) на кольце
+        const numMarkers = 8; // Количество стрелок по окружности
+        const markerSize = this.tubeRadius * 0.8;
+
+        for (let i = 0; i < numMarkers; i++) {
+            const angle = (i / numMarkers) * Math.PI * 2;
+
+            // Создаем стрелку (конус)
+            const geometry = new THREE.ConeGeometry(markerSize * 0.6, markerSize * 1.5, 8);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.6
+            });
+
+            const marker = new THREE.Mesh(geometry, material);
+
+            // Позиционируем маркер на кольце
+            const markerPos = this.getPointOnRing(angle);
+            marker.position.copy(markerPos);
+            marker.position.y += 0.15; // Немного выше кольца
+
+            // Поворачиваем стрелку в направлении движения
+            marker.rotation.x = -Math.PI / 2; // Стрелка смотрит вниз на кольцо
+            marker.rotation.z = angle + Math.PI / 2; // Направление по касательной к кольцу
+
+            marker.userData.baseAngle = angle; // Сохраняем базовый угол
+
+            this.scene.add(marker);
+            this.directionMarkers.push(marker);
+        }
+    }
+
+    update(deltaTime) {
+        // Анимируем маркеры направления
+        const statusInfo = RING_STATUSES[this.status];
+        const rotationSpeed = statusInfo.speed * 0.3; // Скорость вращения маркеров
+
+        this.markerPhase += rotationSpeed * deltaTime * 2;
+
+        this.directionMarkers.forEach((marker, index) => {
+            const baseAngle = marker.userData.baseAngle;
+            const currentAngle = baseAngle + this.markerPhase;
+
+            // Обновляем позицию маркера
+            const markerPos = this.getPointOnRing(currentAngle);
+            marker.position.x = markerPos.x;
+            marker.position.z = markerPos.z;
+
+            // Обновляем поворот стрелки
+            marker.rotation.z = currentAngle + Math.PI / 2;
+
+            // Пульсация прозрачности для визуального эффекта
+            const pulsePhase = (currentAngle + Date.now() * 0.002) % (Math.PI * 2);
+            marker.material.opacity = 0.4 + Math.sin(pulsePhase) * 0.2;
+        });
+    }
+
     setStatus(status) {
         this.status = status;
         const statusInfo = RING_STATUSES[status];
         this.material.color.setHex(statusInfo.color);
         this.material.emissive.setHex(statusInfo.color);
         this.glowMesh.material.color.setHex(statusInfo.color);
+
+        // Обновляем цвет маркеров в зависимости от статуса
+        const markerColor = status === 'BLOCKED' ? 0xff0000 : 0xffffff;
+        this.directionMarkers.forEach(marker => {
+            marker.material.color.setHex(markerColor);
+            // Если заблокировано, делаем маркеры более заметными
+            marker.material.opacity = status === 'BLOCKED' ? 0.9 : 0.6;
+        });
     }
 
     getPointOnRing(angle) {
@@ -658,12 +728,6 @@ class RingsGame {
         // Обновляем игрока
         this.player.update(deltaTime);
 
-        // Обновляем станции
-        this.stations.forEach(station => station.update(deltaTime));
-
-        // Обновляем цель
-        this.goal.update(deltaTime);
-
         // Проверяем достижение цели
         if (this.goal.isReached(this.player.mesh.position)) {
             this.finishGame();
@@ -693,6 +757,17 @@ class RingsGame {
         const currentTime = performance.now();
         const deltaTime = (currentTime - this.lastTime) / 1000;
         this.lastTime = currentTime;
+
+        // Всегда обновляем кольца (даже на стартовом экране)
+        this.rings.forEach(ring => ring.update(deltaTime));
+
+        // Всегда обновляем станции (пульсация)
+        this.stations.forEach(station => station.update(deltaTime));
+
+        // Всегда обновляем цель (анимация)
+        if (this.goal) {
+            this.goal.update(deltaTime);
+        }
 
         this.update(deltaTime);
         this.controls.update();
